@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+@import './base.css';
+
+#app {
+  @apply min-h-screen;
+}

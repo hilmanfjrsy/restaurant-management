@@ -1,0 +1,33 @@
+FROM oven/bun:1 AS builder
+
+WORKDIR /app
+
+ARG VITE_TABLE_SERVICE_URL
+ARG VITE_TABLE_SERVICE_API_KEY
+ARG VITE_TABLE_SERVICE_WS_URL
+ARG VITE_RESERVATION_SERVICE_URL
+ARG VITE_RESERVATION_SERVICE_API_KEY
+
+ENV VITE_TABLE_SERVICE_URL=$VITE_TABLE_SERVICE_URL
+ENV VITE_TABLE_SERVICE_API_KEY=$VITE_TABLE_SERVICE_API_KEY
+ENV VITE_TABLE_SERVICE_WS_URL=$VITE_TABLE_SERVICE_WS_URL
+ENV VITE_RESERVATION_SERVICE_URL=$VITE_RESERVATION_SERVICE_URL
+ENV VITE_RESERVATION_SERVICE_API_KEY=$VITE_RESERVATION_SERVICE_API_KEY
+
+COPY package.json bun.lock* ./
+RUN bun install --frozen-lockfile
+
+COPY . .
+RUN bun run build
+
+FROM oven/bun:1-alpine AS production
+
+WORKDIR /app
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+
+CMD ["bun", "run", "preview", "--host", "0.0.0.0", "--port", "3000"]

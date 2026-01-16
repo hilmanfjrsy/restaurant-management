@@ -1,0 +1,13 @@
+{
+  "name": "restaurant-management",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "table-service",
+    "reservation-service"
+  ],  
+  "scripts": {},
+  "dependencies": {},
+  "devDependencies": {}
+}

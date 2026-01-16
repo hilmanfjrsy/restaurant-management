@@ -1,0 +1,71 @@
+name: Test Coverage
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  dashboard:
+    runs-on: ubuntu-latest
+    name: Dashboard Test Coverage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./dashboard
+        run: bun install
+
+      - name: Run tests with coverage
+        working-directory: ./dashboard
+        run: bun run test:coverage
+
+  reservation-service:
+    runs-on: ubuntu-latest
+    name: Reservation Service Test Coverage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./reservation-service
+        run: bun install
+
+      - name: Run tests with coverage
+        working-directory: ./reservation-service
+        run: bun run test:coverage
+
+  table-service:
+    runs-on: ubuntu-latest
+    name: Table Service Test Coverage
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        working-directory: ./table-service
+        run: bun install
+
+      - name: Run tests with coverage
+        working-directory: ./table-service
+        run: bun run test:coverage

@@ -1,0 +1,177 @@
+version: '3.8'
+
+services:
+  # Database Service
+  postgres:
+    image: postgres:15-alpine
+    container_name: restaurant-db
+    environment:
+      POSTGRES_DB: restaurant_management
+      POSTGRES_USER: restaurant_user
+      POSTGRES_PASSWORD: restaurant_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./packages/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restaurant_user -d restaurant_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    container_name: restaurant-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # RabbitMQ Service
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: restaurant-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: restaurant_user
+      RABBITMQ_DEFAULT_PASS: restaurant_password
+      RABBITMQ_DEFAULT_VHOST: restaurant_vhost
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - restaurant-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Dashboard Service
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+      args:
+        VITE_TABLE_SERVICE_URL: http://localhost:3002
+        VITE_TABLE_SERVICE_API_KEY: secret-api-key
+        VITE_TABLE_SERVICE_WS_URL: ws://localhost:3002
+        VITE_RESERVATION_SERVICE_URL: http://localhost:3001
+        VITE_RESERVATION_SERVICE_API_KEY: secret-api-key
+    container_name: restaurant-dashboard
+    ports:
+      - "3000:3000"
+    depends_on:
+      reservation-service:
+        condition: service_started
+      table-service:
+        condition: service_started
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+
+  # Reservation Service
+  reservation-service:
+    build:
+      context: .
+      dockerfile: reservation-service/Dockerfile
+    container_name: restaurant-reservation-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: restaurant_management
+      DATABASE_USERNAME: restaurant_user
+      DATABASE_PASSWORD: restaurant_password
+      DATABASE_USE_SSL: false
+      EVENT_HOST: rabbitmq
+      EVENT_PORT: 5672
+      EVENT_USERNAME: restaurant_user
+      EVENT_PASSWORD: restaurant_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ''
+      API_KEY: secret-api-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Table Service
+  table-service:
+    build:
+      context: .
+      dockerfile: table-service/Dockerfile
+    container_name: restaurant-table-service
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: restaurant_management
+      DATABASE_USERNAME: restaurant_user
+      DATABASE_PASSWORD: restaurant_password
+      DATABASE_USE_SSL: false
+      EVENT_HOST: rabbitmq
+      EVENT_PORT: 5672
+      EVENT_USERNAME: restaurant_user
+      EVENT_PASSWORD: restaurant_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ''
+      API_KEY: secret-api-key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  restaurant-network:
+    driver: bridge
