@@ -18,7 +18,7 @@ COPY package.json bun.lock* ./
 RUN bun install --frozen-lockfile
 
 COPY . .
-RUN bun run build
+RUN bun run build-only
 
 FROM oven/bun:1-alpine AS production
 

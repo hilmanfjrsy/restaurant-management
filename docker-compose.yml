@@ -45,7 +45,6 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: restaurant_user
       RABBITMQ_DEFAULT_PASS: restaurant_password
-      RABBITMQ_DEFAULT_VHOST: restaurant_vhost
     ports:
       - "5672:5672"
       - "15672:15672"
